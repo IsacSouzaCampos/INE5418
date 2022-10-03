@@ -1,19 +1,25 @@
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <stdio.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+
+#include <stdio.h>
 #include <stdlib.h>
 
+#define STR2(x) #x
+#define STR(X) STR2(X)
+
+#define MAX_SIZE 256
+
 char* get_line(int index) {
-  printf("A linha a ser lida eh: %d\n", index);
-  return "Texto de teste";
+  printf("\n\nA linha a ser lida eh: %d\n", index);
+  return "Texto de teste\n\n\n";
 }
 
-void add_line(int index, char* text) {
-  printf("A linha a ser alterada eh: %d\n", index);
-  printf("O texto a ser adicionado eh: %s\n", text);
+void add_line(int index, char text[MAX_SIZE]) {
+  printf("\n\nA linha a ser alterada eh: %d\n", index);
+  printf("O texto a ser adicionado eh: %s\n\n\n", text);
 }
 
 int main()
@@ -25,20 +31,23 @@ int main()
     printf("[0] sair\n");
     printf("\nOpcao: ");
     scanf("%d", &opcao);
+    fflush(stdin);
 
     int index;
     switch(opcao) {
       case 1: printf("\n\nlinha: ");
               scanf("%d", &index);
+              fflush(stdin);
               printf("O texto lido eh: %s\n", get_line(index));
               break;
       
-      case 2: char text[255];
+      case 2: char text[MAX_SIZE];
               printf("\n\nlinha: ");
               scanf("%d", &index);
               fflush(stdin);
               printf("texto: ");
-              scanf("%s", &text);
+              scanf(" %" STR(MAX_SIZE) "[^\n]", text);
+              fflush(stdin);
               add_line(index, text);
               break;
     }
