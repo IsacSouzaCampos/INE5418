@@ -66,7 +66,7 @@ int add_line(int index, char* text) {
 		exit(1);
   }
 	
-  write(sockfd, &la, sizeof(struct line_addtion *));
+  write(sockfd, &la, sizeof(la));
 	read(sockfd, &result, sizeof(int));
 	
   close(sockfd);
@@ -100,11 +100,12 @@ int main()
               printf("texto: ");
               scanf(" %" STR(MAX_SIZE) "[^\n]", text);
               fflush(stdin);
+              printf("\n\n");
               if(add_line(index, text) == 1)
                 printf("Erro ao inserir linha %d\n\n\n", index);
               break;
     }
   }
 
-  return 0;
+  exit(0);
 }
