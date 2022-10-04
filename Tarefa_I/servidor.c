@@ -11,8 +11,11 @@
 
 #define MAX_SIZE 256
 #define MAX_LINES 1000
+#define MAX_CLIENTS 3 // Counting the reading thread
 
 char text[MAX_LINES][MAX_SIZE];
+pthread_t thread_id[MAX_CLIENTS];
+pthread_mutex_t lock;
 // strcpy(text[0], "fazendo um teste");
 // strcpy(text[2], "fazendo outro teste");
 
@@ -37,7 +40,7 @@ void *reading_thread(void *vargp) {
   server_len = sizeof(server_address);
   
   bind(server_sockfd, (struct sockaddr *) &server_address, server_len);
-	listen(server_sockfd, 5);
+	listen(server_sockfd, MAX_CLIENTS);
 	
   while(1) {		
 		printf("server waiting to read\n");
@@ -80,7 +83,10 @@ void *writing_thread(void *vargp) {
     read(client_sockfd, &la, sizeof(la));
     strcpy(text[la.line], la.text);
     int result = 0;
+    pthread_mutex_lock(&lock);
     write(client_sockfd, &result, 1);
+    sleep(30);
+    pthread_mutex_unlock(&lock);
 		
     close(client_sockfd);
 	}
@@ -89,10 +95,16 @@ void *writing_thread(void *vargp) {
 
 int main()
 {
-  pthread_t thread_id[2];
+  if (pthread_mutex_init(&lock, NULL)) {
+    perror("error: could not create mutex");
+    exit(1);
+  }
+
   pthread_create(&thread_id[0], NULL, reading_thread, NULL);
-  pthread_create(&thread_id[1], NULL, writing_thread, NULL);
-  for(int i = 0; i < 2; i++)
+  for (size_t i = 1; i < MAX_CLIENTS; i++)
+    pthread_create(&thread_id[i], NULL, writing_thread, NULL);
+
+  for(int i = 0; i < MAX_CLIENTS; i++)
     pthread_join(thread_id[i], NULL);
   
   exit(0);
