@@ -8,17 +8,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "utils.h"
+
 #define STR2(x) #x
 #define STR(X) STR2(X)
 
-#define MAX_SIZE 256
+void get_line(int index, char* text) {
+  struct request req;
+  req.type  = GET;
+  req.index = index;
 
-struct line_addition {
-  int line;
-  char text[MAX_SIZE];
-};
-
-void get_line(int index, char* line) {
   int sockfd;
   int len;
   struct sockaddr_in address;
@@ -38,15 +37,16 @@ void get_line(int index, char* line) {
   }
 	
   write(sockfd, &index, sizeof(int));
-	read(sockfd, line, MAX_SIZE);
+	read(sockfd, text, MAX_SIZE);
 	
   close(sockfd);
 }
 
 int add_line(int index, char* text) {
-  struct line_addition la;
-  la.line = index;
-  strcpy(la.text, text);
+  struct request req;
+  req.type  = ADD;
+  req.index = index;
+  strcpy(req.text, text);
 
   int sockfd;
   int len;
@@ -57,7 +57,7 @@ int add_line(int index, char* text) {
 
   address.sin_family = AF_INET;
   address.sin_addr.s_addr = inet_addr("127.0.0.1");
-  address.sin_port = htons(9735);
+  address.sin_port = htons(9734);
 
   len = sizeof(address);
   result = connect(sockfd, (struct sockaddr *) &address, len);
@@ -66,7 +66,7 @@ int add_line(int index, char* text) {
 		exit(1);
   }
 	
-  write(sockfd, &la, sizeof(la));
+  write(sockfd, &req, sizeof(req));
 	read(sockfd, &result, sizeof(int));
 	
   close(sockfd);
