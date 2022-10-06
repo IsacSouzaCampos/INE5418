@@ -9,24 +9,50 @@
 #include <string.h>
 #include <pthread.h>
 
-#define MAX_SIZE 256
-#define MAX_LINES 1000
-#define MAX_CLIENTS 3 // Counting the reading thread
+#include "utils.h"
 
 char text[MAX_LINES][MAX_SIZE];
-pthread_t thread_id[MAX_CLIENTS];
 pthread_mutex_t lock;
-// strcpy(text[0], "fazendo um teste");
-// strcpy(text[2], "fazendo outro teste");
 
-struct line_addition {
-  int line;
-  char text[MAX_SIZE];
-};
 
-void *reading_thread(void *vargp) {
-  // THREAD DE LEITURA
-  int index;
+void* keep_connection(void* p_client_sockfd) {
+  int client_sockfd = *((int*) p_client_sockfd);
+  free(p_client_sockfd);
+  struct request req;
+  
+  while(1) {
+    printf("Socket esperando\n");
+    read(client_sockfd, &req, sizeof(req));
+    
+    if(req.type == GET) {
+      printf("Vai ler\n");
+      write(client_sockfd, text[req.index], MAX_SIZE);
+      printf("Leu \"%s\" da linha %d\n", text[req.index], req.index);
+    }
+    else if(req.type == ADD) {
+      printf("Vai escrever\n");
+      int result = 0;
+      pthread_mutex_lock(&lock);
+      strcpy(text[req.index], req.text);
+      pthread_mutex_unlock(&lock);
+      
+      write(client_sockfd, &result, 1);
+      printf("Escreveu \"%s\" na linha %d\n", text[req.index], req.index);
+    }
+    else if(req.type == CLS)
+      break;
+  }
+
+  close(client_sockfd);
+  return NULL;
+}
+
+int main()
+{
+  if (pthread_mutex_init(&lock, NULL)) {
+    perror("error: could not create mutex");
+    exit(1);
+  }
 
   int server_sockfd, client_sockfd;
   int server_len, client_len;
@@ -40,72 +66,18 @@ void *reading_thread(void *vargp) {
   server_len = sizeof(server_address);
   
   bind(server_sockfd, (struct sockaddr *) &server_address, server_len);
-	listen(server_sockfd, MAX_CLIENTS);
-	
-  while(1) {		
-		printf("server waiting to read\n");
-		
-    client_len = sizeof(client_address);
-		client_sockfd = accept(server_sockfd, (struct sockaddr *) &client_address, &client_len);
-		
-    read(client_sockfd, &index, sizeof(int));
-    write(client_sockfd, text[index], MAX_SIZE);
-		
-    close(client_sockfd);
-	}
-  return NULL;
-}
-
-void *writing_thread(void *vargp) {
-  // THREAD DE LEITURA
-  struct line_addition la;
-
-  int server_sockfd, client_sockfd;
-  int server_len, client_len;
-  struct sockaddr_in server_address;
-  struct sockaddr_in client_address;
-
-  server_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  server_address.sin_family = AF_INET;
-  server_address.sin_addr.s_addr = htonl(INADDR_ANY);
-  server_address.sin_port = htons(9735);
-  server_len = sizeof(server_address);
-  
-  bind(server_sockfd, (struct sockaddr *) &server_address, server_len);
 	listen(server_sockfd, 5);
 	
-  while(1) {		
-		printf("server waiting to write\n");
-		
+  while(1) {
+    printf("Servidor esperando\n");
     client_len = sizeof(client_address);
 		client_sockfd = accept(server_sockfd, (struct sockaddr *) &client_address, &client_len);
-		
-    read(client_sockfd, &la, sizeof(la));
-    strcpy(text[la.line], la.text);
-    int result = 0;
-    pthread_mutex_lock(&lock);
-    write(client_sockfd, &result, 1);
-    sleep(30);
-    pthread_mutex_unlock(&lock);
-		
-    close(client_sockfd);
-	}
-  return NULL;
-}
 
-int main()
-{
-  if (pthread_mutex_init(&lock, NULL)) {
-    perror("error: could not create mutex");
-    exit(1);
+    pthread_t t;
+    int *p_client_sockfd = malloc(sizeof(int));
+    *p_client_sockfd = client_sockfd;
+    pthread_create(&t, NULL, keep_connection, p_client_sockfd);
   }
-
-  pthread_create(&thread_id[0], NULL, reading_thread, NULL);
-  for (size_t i = 1; i < MAX_CLIENTS; i++)
-    pthread_create(&thread_id[i], NULL, writing_thread, NULL);
-
-  for(int i = 0; i < MAX_CLIENTS; i++)
-    pthread_join(thread_id[i], NULL);
   
   exit(0);
 }
