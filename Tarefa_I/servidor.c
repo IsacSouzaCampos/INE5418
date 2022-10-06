@@ -12,7 +12,8 @@
 #include "utils.h"
 
 char text[MAX_LINES][MAX_SIZE];
-pthread_mutex_t lock;
+int count_clients;
+pthread_mutex_t write_lock, count_lock;
 
 
 void* keep_connection(void* p_client_sockfd) {
@@ -32,11 +33,11 @@ void* keep_connection(void* p_client_sockfd) {
     else if(req.type == ADD) {
       printf("Vai escrever\n");
       int result = 0;
-      pthread_mutex_lock(&lock);
+      pthread_mutex_lock(&write_lock);
       strcpy(text[req.index], req.text);
-      pthread_mutex_unlock(&lock);
+      pthread_mutex_unlock(&write_lock);
       
-      write(client_sockfd, &result, 1);
+      write(client_sockfd, &result, sizeof(int));
       printf("Escreveu \"%s\" na linha %d\n", text[req.index], req.index);
     }
     else if(req.type == CLS)
@@ -44,12 +45,20 @@ void* keep_connection(void* p_client_sockfd) {
   }
 
   close(client_sockfd);
+
+  pthread_mutex_lock(&count_lock);
+  count_clients--;
+  printf("Clients logados: %d\n", count_clients);
+  pthread_mutex_unlock(&count_lock);
+
   return NULL;
 }
 
 int main()
 {
-  if (pthread_mutex_init(&lock, NULL)) {
+  count_clients = 0;
+  
+  if (pthread_mutex_init(&write_lock, NULL) || pthread_mutex_init(&count_lock, NULL)) {
     perror("error: could not create mutex");
     exit(1);
   }
@@ -73,10 +82,27 @@ int main()
     client_len = sizeof(client_address);
 		client_sockfd = accept(server_sockfd, (struct sockaddr *) &client_address, &client_len);
 
+    if(count_clients >= MAX_CLIENTS) {
+      printf("Numero de clients excedido\n");
+      int result = -1;
+      write(client_sockfd, &result, sizeof(int));
+      close(client_sockfd);
+      continue;
+    } else {
+      printf("Conexao ok\n");
+      int result = 0;
+      write(client_sockfd, &result, sizeof(int));
+    }
+
     pthread_t t;
     int *p_client_sockfd = malloc(sizeof(int));
     *p_client_sockfd = client_sockfd;
     pthread_create(&t, NULL, keep_connection, p_client_sockfd);
+
+    pthread_mutex_lock(&count_lock);
+    count_clients++;
+    printf("Clients logados: %d\n", count_clients);
+    pthread_mutex_unlock(&count_lock);
   }
   
   exit(0);

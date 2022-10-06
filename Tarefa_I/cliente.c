@@ -62,6 +62,12 @@ int main()
 		exit(1);
   }
 
+  read(sockfd, &result, sizeof(int));
+  if(result == -1) {
+    printf("Numero de clients excedido\n");
+    exit(1);
+  }
+
   int opcao = -1;
   while(opcao) {
     printf("[1] ler linha\n");
