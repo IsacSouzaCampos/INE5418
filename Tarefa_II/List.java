@@ -30,7 +30,7 @@ public class List extends UnicastRemoteObject implements ListInterface{
 
 	@Override
 	public String remove(int key) throws RemoteException {
-		String value = this.get(key);
+		String value = list.get(key);
 		list.remove(key);
 		
 		return value;
