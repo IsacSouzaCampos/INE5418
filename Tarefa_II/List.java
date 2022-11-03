@@ -21,9 +21,7 @@ public class List extends UnicastRemoteObject implements ListInterface{
 	
 	@Override
 	public String get(int key) throws RemoteException {
-		lock.lock();
 		String value = list.get(key);
-		lock.unlock();
 		
 		return value;
 	}

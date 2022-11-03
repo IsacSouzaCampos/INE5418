@@ -33,13 +33,10 @@ public class Client {
 	}
 	
 	public void execute() {
-		// String entrada;
 		String comando;
 		int key;
 		String value;
 
-		// System.out.println(Thread.currentThread().getName());
-		
 		try {
 			System.out.println("Entre com um dos comandos a seguir:\n \t\tput <key> <valor>\n\t\tget <key>\n\t\tremove <key>\n\t\tsair\n\n");
 			while(true) {
